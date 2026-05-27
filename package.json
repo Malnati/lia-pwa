@@ -1,0 +1,19 @@
+{
+  "name": "@lia/pwa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PWA mobile/offline-first para operadores, entregadores, pedidos, checkpoints, anexos e sync.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=22.14.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "lint": "node scripts/validate-static.mjs",
+    "test": "node scripts/validate-static.mjs",
+    "build": "node scripts/validate-static.mjs",
+    "deploy:cloudflare": "node scripts/validate-static.mjs && pnpm dlx wrangler@latest pages deploy public --project-name=lia-pwa --branch=main"
+  }
+}
