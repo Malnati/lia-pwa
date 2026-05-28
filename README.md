@@ -84,6 +84,9 @@ pnpm test:e2e
 
 No GitHub Actions, o E2E roda após o deploy Cloudflare Pages quando os secrets equivalentes existem.
 
+No GitHub Actions, o E2E publicado legado que ainda depende de autenticação por provedor externo só roda quando `LIA_E2E_ALLOW_LEGACY_PROVIDER_AUTH=1` estiver definido em variables. Enquanto a API `/api/auth/*` modelada no banco não existir, esse E2E legado fica bloqueado por contrato e deve ser substituído, não tratado como aceite.
+
+
 ## Design system
 
 - React + Vite + TypeScript + Tailwind + shadcn/ui.
