@@ -19,15 +19,50 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 
-const defaultDraft = {
+const checkpointOptions = [
+  { key: 'pickup_checkin', label: 'Retirada · check-in' },
+  { key: 'pickup_checkout', label: 'Retirada · check-out' },
+  { key: 'lab_checkin', label: 'Laboratório · check-in' },
+  { key: 'lab_checkout', label: 'Laboratório · check-out' },
+  { key: 'delivery_checkin', label: 'Entrega · check-in' },
+  { key: 'delivery_checkout', label: 'Entrega · check-out' },
+  { key: 'customer_confirmation', label: 'Confirmação cliente' },
+  { key: 'payment_confirmation', label: 'Confirmação pagamento' }
+] as const;
+
+type CheckpointKey = (typeof checkpointOptions)[number]['key'];
+type PaymentCurrency = 'PYG' | 'USD';
+
+type OrderDraft = {
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  product: string;
+  notes: string;
+  checkpointKey: CheckpointKey;
+  checkpointActor: string;
+  checkpointNotes: string;
+  paymentAmount: string;
+  paymentCurrency: PaymentCurrency;
+  attachmentKind: 'photo' | 'signature';
+};
+
+const defaultDraft: OrderDraft = {
   customerName: '',
   customerPhone: '',
   deliveryAddress: '',
   product: 'Molde prótese',
-  notes: ''
+  notes: '',
+  checkpointKey: 'pickup_checkin',
+  checkpointActor: 'Equipe PWA',
+  checkpointNotes: 'Retirada registrada offline',
+  paymentAmount: '125000',
+  paymentCurrency: 'PYG',
+  attachmentKind: 'photo'
 };
 
 const links = [
@@ -42,6 +77,8 @@ export function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [draft, setDraft] = useState(defaultDraft);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentInputKey, setAttachmentInputKey] = useState(0);
   const [orders, setOrders] = useState<PendingOrder[]>([]);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
   const [statusMessage, setStatusMessage] = useState('Fila local pronta.');
@@ -112,6 +149,18 @@ export function App() {
 
     const now = new Date().toISOString();
     const localId = crypto.randomUUID();
+    const paymentAmount = Number.parseInt(draft.paymentAmount.replace(/\D/g, ''), 10);
+
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      setErrorMessage('Informe um valor de pagamento inteiro maior que zero.');
+      return;
+    }
+
+    if (attachmentFile && !isSupportedAttachmentType(attachmentFile.type)) {
+      setErrorMessage('Anexo deve ser imagem PNG, JPEG ou WebP.');
+      return;
+    }
+
     const localOrder: PendingOrder = {
       id: localId,
       clientId: `lia-pwa-${Date.now()}-${localId.slice(0, 8)}`,
@@ -120,6 +169,27 @@ export function App() {
       deliveryAddress: draft.deliveryAddress.trim(),
       product: draft.product.trim() || 'Molde prótese',
       notes: draft.notes.trim(),
+      checkpoint: {
+        key: draft.checkpointKey,
+        actor: draft.checkpointActor.trim() || 'Equipe PWA',
+        notes: draft.checkpointNotes.trim(),
+        timestamp: now
+      },
+      payment: {
+        amount: paymentAmount,
+        currency: draft.paymentCurrency
+      },
+      attachment: attachmentFile
+        ? {
+            kind: draft.attachmentKind,
+            filename: attachmentFile.name || `lia-pwa-${localId}.png`,
+            contentType: attachmentFile.type,
+            size: attachmentFile.size,
+            clientAttachmentId: `lia-pwa-attachment-${localId}`,
+            capturedAt: now,
+            data: await attachmentFile.arrayBuffer()
+          }
+        : undefined,
       status: 'pending',
       createdAt: now,
       updatedAt: now
@@ -132,8 +202,10 @@ export function App() {
 
     await savePendingOrder(localOrder);
     setDraft(defaultDraft);
+    setAttachmentFile(null);
+    setAttachmentInputKey((current) => current + 1);
     await refreshQueue();
-    setStatusMessage(isOnline ? 'Pedido salvo na fila local. Use Sincronizar fila para publicar na API.' : 'Pedido salvo offline no IndexedDB.');
+    setStatusMessage(isOnline ? 'Pedido, checkpoint, pagamento e anexo salvos na fila local. Use Sincronizar fila para publicar na API.' : 'Pedido com artefatos salvo offline no IndexedDB.');
   }
 
   async function syncQueue() {
@@ -162,6 +234,7 @@ export function App() {
             status: 'synced',
             syncedAt: new Date().toISOString(),
             syncedOrderId: published.id,
+            syncedArtifacts: published.syncedArtifacts,
             error: undefined
           });
         } catch (error) {
@@ -279,10 +352,10 @@ export function App() {
         <Card>
           <CardHeader>
             <CardTitle>Novo pedido offline</CardTitle>
-            <CardDescription>Funciona sem rede após o login. Pagamento online permanece dependente de conexão.</CardDescription>
+            <CardDescription>Funciona sem rede após o login. Pedido, checkpoint, pagamento e anexo ficam em IndexedDB até sincronizar.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-4 md:grid-cols-2" onSubmit={(event) => void saveDraft(event)}>
+            <form className="grid gap-4 lg:grid-cols-3" onSubmit={(event) => void saveDraft(event)}>
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="customerName">Paciente/cliente</FieldLabel>
@@ -307,6 +380,66 @@ export function App() {
                   <Textarea id="notes" value={draft.notes} onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))} />
                   <FieldDescription>Será enviado para `notes` do pedido quando sincronizar.</FieldDescription>
                 </Field>
+              </FieldGroup>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="checkpointKey">Checkpoint</FieldLabel>
+                  <Select value={draft.checkpointKey} onValueChange={(value) => setDraft((current) => ({ ...current, checkpointKey: value as CheckpointKey }))}>
+                    <SelectTrigger id="checkpointKey" className="w-full">
+                      <SelectValue placeholder="Escolha um checkpoint" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {checkpointOptions.map((checkpoint) => (
+                          <SelectItem key={checkpoint.key} value={checkpoint.key}>{checkpoint.label}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="checkpointActor">Responsável pelo checkpoint</FieldLabel>
+                  <Input id="checkpointActor" value={draft.checkpointActor} onChange={(event) => setDraft((current) => ({ ...current, checkpointActor: event.target.value }))} />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="checkpointNotes">Notas do checkpoint</FieldLabel>
+                  <Textarea id="checkpointNotes" value={draft.checkpointNotes} onChange={(event) => setDraft((current) => ({ ...current, checkpointNotes: event.target.value }))} />
+                  <FieldDescription>Será publicado via `PATCH /api/orders/:id/checkpoints/:key`.</FieldDescription>
+                </Field>
+              </FieldGroup>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="paymentAmount">Valor do pagamento</FieldLabel>
+                  <Input id="paymentAmount" inputMode="numeric" value={draft.paymentAmount} onChange={(event) => setDraft((current) => ({ ...current, paymentAmount: event.target.value }))} />
+                  <FieldDescription>Valor inteiro em centavos/unidade operacional enviado ao Worker.</FieldDescription>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="paymentCurrency">Moeda</FieldLabel>
+                  <Select value={draft.paymentCurrency} onValueChange={(value) => setDraft((current) => ({ ...current, paymentCurrency: value as PaymentCurrency }))}>
+                    <SelectTrigger id="paymentCurrency" className="w-full">
+                      <SelectValue placeholder="Moeda" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="PYG">PYG</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="attachmentFile">Anexo offline</FieldLabel>
+                  <Input
+                    key={attachmentInputKey}
+                    id="attachmentFile"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => setAttachmentFile(event.target.files?.[0] ?? null)}
+                  />
+                  <FieldDescription>
+                    {attachmentFile ? `${attachmentFile.name} · ${Math.round(attachmentFile.size / 1024)} KB` : 'Opcional; será enviado para `/api/orders/:id/attachments`.'}
+                  </FieldDescription>
+                </Field>
                 <Button type="submit">Salvar offline</Button>
               </FieldGroup>
             </form>
@@ -329,11 +462,23 @@ export function App() {
                       <p className="font-medium">{order.customerName}</p>
                       <p className="text-sm text-muted-foreground">{order.product} · {order.deliveryAddress}</p>
                       <p className="text-xs text-muted-foreground">clientId: {order.clientId}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {order.checkpoint && <Badge variant="outline">checkpoint: {checkpointLabel(order.checkpoint.key)}</Badge>}
+                        {order.payment && <Badge variant="outline">pagamento: {order.payment.currency} {order.payment.amount}</Badge>}
+                        {order.attachment && <Badge variant="outline">anexo: {order.attachment.filename}</Badge>}
+                      </div>
                     </div>
                     <Badge variant={order.status === 'synced' ? 'secondary' : order.status === 'failed' ? 'destructive' : 'outline'}>
                       {statusLabel(order.status)}
                     </Badge>
                   </div>
+                  {order.syncedArtifacts && (
+                    <div className="mt-2 flex flex-wrap gap-2" data-testid="synced-artifacts">
+                      {order.syncedArtifacts.checkpoint && <Badge variant="secondary">checkpoint sincronizado</Badge>}
+                      {order.syncedArtifacts.payment && <Badge variant="secondary">pagamento sincronizado</Badge>}
+                      {order.syncedArtifacts.attachment && <Badge variant="secondary">anexo sincronizado</Badge>}
+                    </div>
+                  )}
                   {order.syncedOrderId && <p className="mt-2 text-xs text-muted-foreground">Pedido publicado: {order.syncedOrderId}</p>}
                   {order.error && <p className="mt-2 text-xs text-destructive">{order.error}</p>}
                 </div>
@@ -351,6 +496,7 @@ export function App() {
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">Field</Badge>
               <Badge variant="outline">Input</Badge>
+              <Badge variant="outline">Select</Badge>
               <Badge variant="outline">Textarea</Badge>
               <Badge variant="outline">Button</Badge>
               <Badge variant="outline">Badge</Badge>
@@ -393,4 +539,12 @@ function statusLabel(status: PendingOrder['status']) {
   if (status === 'syncing') return 'sincronizando';
   if (status === 'failed') return 'falhou';
   return 'pendente local';
+}
+
+function checkpointLabel(key: NonNullable<PendingOrder['checkpoint']>['key']) {
+  return checkpointOptions.find((checkpoint) => checkpoint.key === key)?.label ?? key;
+}
+
+function isSupportedAttachmentType(contentType: string) {
+  return ['image/png', 'image/jpeg', 'image/webp'].includes(contentType);
 }

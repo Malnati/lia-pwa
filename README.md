@@ -18,15 +18,15 @@ https://pwa.aneety.com/
 ## Fluxo principal
 
 - Login Supabase Auth.
-- Criar pedido e operar offline no IndexedDB (`lia-pwa-offline-v1`).
-- Sincronizar a fila local com https://api.aneety.com usando JWT Supabase e `POST /api/orders`.
+- Criar pedido, checkpoint, intenção de pagamento e anexo enquanto offline no IndexedDB (`lia-pwa-offline-v1`).
+- Sincronizar a fila local com https://api.aneety.com usando JWT Supabase e endpoints reais de pedidos, checkpoints, pagamentos e anexos.
 - Validar persistência no Supabase/Postgres real via API.
 - Manter service worker estático para cache do app shell em Cloudflare Pages Free.
 - Persistir dados no Supabase/Postgres real.
 
 ## Status
 
-Fatia funcional inicial: login Supabase, criação offline de pedidos, fila IndexedDB, sync manual contra Worker/Hono publicado e E2E publicado em `aneety.com`.
+Fatia funcional inicial: login Supabase, criação offline de pedidos com checkpoint, intenção de pagamento e anexo, fila IndexedDB, sync manual contra Worker/Hono publicado e E2E publicado em `aneety.com`.
 
 ## Screenshot atual
 
@@ -58,10 +58,10 @@ Nunca configurar `SUPABASE_SERVICE_ROLE_KEY` no frontend/Pages.
 O E2E da PWA roda contra `https://pwa.aneety.com/` e `https://api.aneety.com`; nunca localhost como aceite. Ele cobre:
 
 - login Supabase real;
-- criação de pedido com o browser offline;
+- criação de pedido com checkpoint, pagamento e anexo com o browser offline;
 - persistência local em IndexedDB;
 - retorno online e sincronização via Worker/Hono;
-- validação de persistência via `GET /api/orders`.
+- validação de persistência via `GET /api/orders`, `GET /api/orders/:id/attachments` e consulta autenticada RLS em `payment_intents`.
 
 Comando:
 
