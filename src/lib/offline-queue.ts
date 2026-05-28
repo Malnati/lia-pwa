@@ -1,5 +1,33 @@
 export type PendingOrderStatus = 'pending' | 'syncing' | 'synced' | 'failed';
 
+export type PendingCheckpoint = {
+  key: 'pickup_checkin' | 'pickup_checkout' | 'lab_checkin' | 'lab_checkout' | 'delivery_checkin' | 'delivery_checkout' | 'customer_confirmation' | 'payment_confirmation';
+  actor: string;
+  notes: string;
+  timestamp: string;
+};
+
+export type PendingPayment = {
+  amount: number;
+  currency: 'PYG' | 'USD';
+};
+
+export type PendingAttachment = {
+  kind: 'photo' | 'signature';
+  filename: string;
+  contentType: string;
+  size: number;
+  clientAttachmentId: string;
+  capturedAt: string;
+  data: ArrayBuffer;
+};
+
+export type SyncedArtifacts = {
+  checkpoint?: boolean;
+  payment?: boolean;
+  attachment?: boolean;
+};
+
 export type PendingOrder = {
   id: string;
   clientId: string;
@@ -8,11 +36,15 @@ export type PendingOrder = {
   deliveryAddress: string;
   product: string;
   notes: string;
+  checkpoint?: PendingCheckpoint;
+  payment?: PendingPayment;
+  attachment?: PendingAttachment;
   status: PendingOrderStatus;
   createdAt: string;
   updatedAt: string;
   syncedAt?: string;
   syncedOrderId?: string;
+  syncedArtifacts?: SyncedArtifacts;
   error?: string;
 };
 
