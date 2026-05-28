@@ -26,9 +26,15 @@ runE2E('PWA salva pedido offline e sincroniza com API/Postgres real', async ({ p
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByText('Sessão ativa', { exact: true })).toBeVisible();
 
+  for (const tabName of ['Pedidos', 'Novo', 'Retirada', 'Entrega', 'Anexos', 'Pagamento', 'Sync', 'Perfil']) {
+    await expect(page.getByRole('tab', { name: tabName })).toBeVisible();
+  }
+
   await context.setOffline(true);
   await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+  await page.getByRole('tab', { name: 'Sync' }).click();
   await expect(page.getByText('offline', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Novo' }).click();
 
   await page.getByLabel('Paciente/cliente').fill(customerName);
   await page.getByLabel('Telefone').fill('+595 21 555 000');
@@ -44,12 +50,14 @@ runE2E('PWA salva pedido offline e sincroniza com API/Postgres real', async ({ p
     buffer: Buffer.from(onePixelPng())
   });
   await page.getByRole('button', { name: 'Salvar offline' }).click();
+  await page.getByRole('tab', { name: 'Pedidos' }).click();
   await expect(page.getByText('pendente local')).toBeVisible();
   await expect(page.getByText(customerName)).toBeVisible();
   await expect(page.getByText(`anexo: ${attachmentFilename}`)).toBeVisible();
 
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await page.getByRole('tab', { name: 'Sync' }).click();
   await expect(page.getByText('online', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Sincronizar fila' }).click();
   await expect(page.getByText('sincronizado', { exact: true })).toBeVisible({ timeout: 30_000 });
