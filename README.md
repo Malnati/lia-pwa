@@ -9,25 +9,30 @@ https://pwa.aneety.com/
 ## Arquitetura alvo
 
 - Cloudflare Pages Free para assets estáticos gerados por Vite em `dist`.
-- Supabase Auth para login.
+- Autenticação em banco de dados via API Lia, sem depender de provedor externo no frontend.
 - API Cloudflare Workers + Hono via `VITE_API_URL=https://api.aneety.com`.
 - Contratos compartilhados por `lia-core` em <https://core.aneety.com/>.
 - Base real Supabase/Postgres; não usar mock como destino final.
 - Custo zero: sem Pages Functions pagas, Workers Paid, Containers ou add-ons.
 
+
+## Limites semânticos de serviços externos
+
+O PWA só deve depender semanticamente de app estático em `pwa.aneety.com`, API `https://api.aneety.com`, fila local e auth modelada no banco Lia. Qualquer serviço de storage, pagamento, sync, push, analytics ou telemetria deve ser adapter substituível, sem secrets no frontend, custo zero e plano de saída.
+
 ## Fluxo principal
 
-- Login Supabase Auth.
+- Login via API Lia com sessão/token modelado no banco.
 - Criar pedido, checkpoint, intenção de pagamento e anexo enquanto offline no IndexedDB (`lia-pwa-offline-v1`).
 - Operar as views mínimas exigidas pelo `REQ.md`: Pedidos, Novo, Retirada, Entrega, Anexos, Pagamento, Sync e Perfil via `Tabs` shadcn/ui.
-- Sincronizar a fila local com https://api.aneety.com usando JWT Supabase e endpoints reais de pedidos, checkpoints, pagamentos e anexos.
+- Sincronizar a fila local com https://api.aneety.com usando token Lia e endpoints reais de pedidos, checkpoints, pagamentos e anexos.
 - Validar persistência no Supabase/Postgres real via API.
 - Manter service worker estático para cache do app shell em Cloudflare Pages Free.
 - Persistir dados no Supabase/Postgres real.
 
 ## Status
 
-Fatia funcional atual: login Supabase, views mínimas mobile com `Tabs` shadcn/ui, criação offline de pedidos com checkpoint, intenção de pagamento e anexo, fila IndexedDB, sync manual contra Worker/Hono publicado e E2E publicado em `aneety.com`.
+Fatia funcional alvo: login via modelo de banco, views mínimas mobile com `Tabs` shadcn/ui, criação offline de pedidos com checkpoint, intenção de pagamento e anexo, fila IndexedDB, sync manual contra Worker/Hono publicado e E2E publicado em `aneety.com`.
 
 ## Screenshot atual
 
@@ -49,8 +54,7 @@ Projeto Cloudflare Pages esperado: `lia-pwa`, com deploy do diretório `dist`.
 Variáveis públicas de build:
 
 - `VITE_API_URL=https://api.aneety.com`
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- Nenhuma variável `VITE_SUPABASE_*` deve ser requisito de login; autenticação passa por `VITE_API_URL` e `/api/auth/*`.
 
 Nunca configurar `SUPABASE_SERVICE_ROLE_KEY` no frontend/Pages.
 
@@ -58,12 +62,12 @@ Nunca configurar `SUPABASE_SERVICE_ROLE_KEY` no frontend/Pages.
 
 O E2E da PWA roda contra `https://pwa.aneety.com/` e `https://api.aneety.com`; nunca localhost como aceite. Ele cobre:
 
-- login Supabase real;
+- login real via modelo de banco da Lia;
 - navegação shadcn nas views Pedidos, Novo, Retirada, Entrega, Anexos, Pagamento, Sync e Perfil;
 - criação de pedido com checkpoint, pagamento e anexo com o browser offline;
 - persistência local em IndexedDB;
 - retorno online e sincronização via Worker/Hono;
-- validação de persistência via `GET /api/orders`, `GET /api/orders/:id/attachments` e consulta autenticada RLS em `payment_intents`.
+- validação de persistência via `GET /api/orders`, `GET /api/orders/:id/attachments` e consulta autorizada conforme RLS/modelo de permissões em `payment_intents`.
 
 Comando:
 
