@@ -8,7 +8,7 @@ https://pwa.aneety.com/
 
 ## Arquitetura alvo
 
-- Cloudflare Pages Free para assets estáticos.
+- Cloudflare Pages Free para assets estáticos gerados por Vite em `dist`.
 - Supabase Auth para login.
 - API Cloudflare Workers + Hono via `VITE_API_URL=https://api.aneety.com`.
 - Contratos compartilhados por `lia-core` em <https://core.aneety.com/>.
@@ -24,7 +24,7 @@ https://pwa.aneety.com/
 
 ## Status
 
-Scaffold inicial separado. Implementação funcional virá após estabilização do `REQ.md`, `lia-core` e `lia-backend` em Cloudflare Workers/Supabase.
+Scaffold React/Vite com baseline shadcn/ui inicial. Fluxos funcionais serão ampliados após estabilização de Auth, API e massa de teste Supabase.
 
 ## Deploy Cloudflare Pages Free
 
@@ -35,4 +35,11 @@ pnpm build
 pnpm deploy:cloudflare
 ```
 
-Projeto Cloudflare Pages esperado: `lia-pwa`.
+Projeto Cloudflare Pages esperado: `lia-pwa`, com deploy do diretório `dist`.
+
+## Design system
+
+- React + Vite + TypeScript + Tailwind + shadcn/ui.
+- `components.json` versionado no repo.
+- Componentes copiados para `src/components/ui` via `pnpm dlx shadcn@latest add`.
+- Aliases `@/*`, `@/components`, `@/components/ui`, `@/lib` configurados para o app.
