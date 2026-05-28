@@ -1,5 +1,7 @@
 # lia-pwa
 
+> **Status histórico:** este repositório preserva PWA histórico do MVP Lia como fonte de aprendizado, evidência e referência. A nova plataforma nasce na organização [Aneety](https://github.com/Aneety), com documentação canônica em [Aneety/.github/docs](https://github.com/Aneety/.github/tree/main/docs) e orquestrador limpo em [Aneety/ai](https://github.com/Aneety/ai). Não use este repositório como contrato futuro de implementação.
+
 PWA mobile/offline-first para operadores, entregadores, pedidos, checkpoints, anexos e sync.
 
 ## URL pública alvo
