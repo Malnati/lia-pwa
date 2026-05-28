@@ -18,13 +18,21 @@ https://pwa.aneety.com/
 ## Fluxo principal
 
 - Login Supabase Auth.
-- Criar pedido e operar offline no IndexedDB.
-- Sincronizar pedidos, checkpoints, anexos e pagamentos com https://api.aneety.com.
+- Criar pedido e operar offline no IndexedDB (`lia-pwa-offline-v1`).
+- Sincronizar a fila local com https://api.aneety.com usando JWT Supabase e `POST /api/orders`.
+- Validar persistência no Supabase/Postgres real via API.
+- Manter service worker estático para cache do app shell em Cloudflare Pages Free.
 - Persistir dados no Supabase/Postgres real.
 
 ## Status
 
-Scaffold React/Vite com baseline shadcn/ui inicial. Fluxos funcionais serão ampliados após estabilização de Auth, API e massa de teste Supabase.
+Fatia funcional inicial: login Supabase, criação offline de pedidos, fila IndexedDB, sync manual contra Worker/Hono publicado e E2E publicado em `aneety.com`.
+
+## Screenshot atual
+
+Interface PWA mobile/offline-first publicada em `https://pwa.aneety.com/`:
+
+![Lia PWA offline/sync](docs/screenshots/pwa-offline-sync-home.png)
 
 ## Deploy Cloudflare Pages Free
 
@@ -36,6 +44,39 @@ pnpm deploy:cloudflare
 ```
 
 Projeto Cloudflare Pages esperado: `lia-pwa`, com deploy do diretório `dist`.
+
+Variáveis públicas de build:
+
+- `VITE_API_URL=https://api.aneety.com`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Nunca configurar `SUPABASE_SERVICE_ROLE_KEY` no frontend/Pages.
+
+## E2E publicado
+
+O E2E da PWA roda contra `https://pwa.aneety.com/` e `https://api.aneety.com`; nunca localhost como aceite. Ele cobre:
+
+- login Supabase real;
+- criação de pedido com o browser offline;
+- persistência local em IndexedDB;
+- retorno online e sincronização via Worker/Hono;
+- validação de persistência via `GET /api/orders`.
+
+Comando:
+
+```bash
+LIA_E2E_ENABLED=1 \
+LIA_E2E_PWA_URL=https://pwa.aneety.com \
+LIA_E2E_API_URL=https://api.aneety.com \
+VITE_SUPABASE_URL=... \
+VITE_SUPABASE_PUBLISHABLE_KEY=... \
+LIA_E2E_ADMIN_EMAIL=... \
+LIA_E2E_ADMIN_PASSWORD=... \
+pnpm test:e2e
+```
+
+No GitHub Actions, o E2E roda após o deploy Cloudflare Pages quando os secrets equivalentes existem.
 
 ## Design system
 

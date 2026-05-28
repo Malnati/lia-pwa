@@ -18,6 +18,9 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      VITE_API_URL: https://api.aneety.com
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -38,3 +41,26 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=lia-pwa --branch=main
+      - name: Install Playwright Chromium
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run published PWA E2E
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        env:
+          LIA_E2E_ENABLED: "1"
+          LIA_E2E_PWA_URL: https://pwa.aneety.com
+          LIA_E2E_API_URL: https://api.aneety.com
+          LIA_E2E_ADMIN_EMAIL: ${{ secrets.LIA_E2E_ADMIN_EMAIL }}
+          LIA_E2E_ADMIN_PASSWORD: ${{ secrets.LIA_E2E_ADMIN_PASSWORD }}
+        run: |
+          missing=0
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY LIA_E2E_ADMIN_EMAIL LIA_E2E_ADMIN_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::warning::Missing $name; skipping published PWA E2E."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 0
+          fi
+          pnpm test:e2e

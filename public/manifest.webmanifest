@@ -1,0 +1,9 @@
+{
+  "name": "Lia PWA",
+  "short_name": "Lia",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7fbfa",
+  "theme_color": "#0f766e",
+  "description": "Operação mobile/offline-first da plataforma Lia."
+}
