@@ -21,6 +21,7 @@ jobs:
       VITE_API_URL: https://api.aneety.com
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      LIA_E2E_ALLOW_LEGACY_PROVIDER_AUTH: ${{ vars.LIA_E2E_ALLOW_LEGACY_PROVIDER_AUTH }}
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -42,7 +43,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=lia-pwa --branch=main
       - name: Install Playwright Chromium
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' && env.LIA_E2E_ALLOW_LEGACY_PROVIDER_AUTH == '1' }}
         run: pnpm exec playwright install --with-deps chromium
       - name: Run published PWA E2E
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
@@ -53,6 +54,10 @@ jobs:
           LIA_E2E_ADMIN_EMAIL: ${{ secrets.LIA_E2E_ADMIN_EMAIL }}
           LIA_E2E_ADMIN_PASSWORD: ${{ secrets.LIA_E2E_ADMIN_PASSWORD }}
         run: |
+          if [ "${LIA_E2E_ALLOW_LEGACY_PROVIDER_AUTH:-}" != "1" ]; then
+            echo "::warning::Skipping legacy provider-auth PWA E2E. REQ.md now requires database-modeled Lia auth via /api/auth/*; replace this gate when the new E2E exists."
+            exit 0
+          fi
           missing=0
           for name in VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY LIA_E2E_ADMIN_EMAIL LIA_E2E_ADMIN_PASSWORD; do
             if [ -z "${!name}" ]; then
