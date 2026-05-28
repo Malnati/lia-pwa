@@ -1,19 +1,35 @@
 {
-  "name": "@lia/pwa",
+  "name": "lia-pwa",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "PWA mobile/offline-first para operadores, entregadores, pedidos, checkpoints, anexos e sync.",
-  "license": "MIT",
   "packageManager": "pnpm@10.33.2",
-  "engines": {
-    "node": ">=22.14.0",
-    "pnpm": ">=10.0.0"
-  },
   "scripts": {
-    "lint": "node scripts/validate-static.mjs",
-    "test": "node scripts/validate-static.mjs",
-    "build": "node scripts/validate-static.mjs",
-    "deploy:cloudflare": "node scripts/validate-static.mjs && pnpm dlx wrangler@latest pages deploy public --project-name=lia-pwa --branch=main"
+    "dev": "vite --host 0.0.0.0",
+    "lint": "tsc -p tsconfig.app.json --noEmit",
+    "test": "tsc -p tsconfig.app.json --noEmit",
+    "build": "tsc -p tsconfig.app.json && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "deploy:cloudflare": "pnpm build && pnpm dlx wrangler@latest pages deploy dist --project-name=lia-pwa --branch=main"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "latest",
+    "@vitejs/plugin-react": "latest",
+    "class-variance-authority": "latest",
+    "clsx": "latest",
+    "lucide-react": "latest",
+    "radix-ui": "^1.4.3",
+    "react": "latest",
+    "react-dom": "latest",
+    "tailwind-merge": "latest",
+    "tailwindcss": "latest",
+    "tw-animate-css": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
   }
 }
